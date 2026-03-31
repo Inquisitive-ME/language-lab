@@ -351,6 +351,66 @@ const DECK = {
         "front": "estoy",
         "back": "I am (temporary)",
         "hint": "feelings, location, state"
+    },
+    {
+        "front": "¿de dónde eres?",
+        "back": "where are you from?",
+        "hint": null
+    },
+    {
+        "front": "tengo ___ años",
+        "back": "I am ___ years old",
+        "hint": "tengo = I have"
+    },
+    {
+        "front": "hablo",
+        "back": "I speak",
+        "hint": "hablar = to speak"
+    },
+    {
+        "front": "un poco",
+        "back": "a little",
+        "hint": null
+    },
+    {
+        "front": "mucho gusto",
+        "back": "nice to meet you",
+        "hint": null
+    },
+    {
+        "front": "encantado/a",
+        "back": "delighted to meet you",
+        "hint": "formal; change -o to -a if female"
+    },
+    {
+        "front": "¿cómo estás?",
+        "back": "how are you?",
+        "hint": "informal"
+    },
+    {
+        "front": "bien",
+        "back": "well / good",
+        "hint": null
+    },
+    {
+        "front": "más o menos",
+        "back": "so-so / more or less",
+        "hint": null
+    },
+    {
+        "front": "aprender",
+        "back": "to learn",
+        "hint": "infinitive form"
+    },
+    {
+        "front": "quiero",
+        "back": "I want",
+        "hint": "querer = to want/love"
+    },
+    {
+        "front": "¿cómo te llamas?",
+        "back": "what is your name?",
+        "hint": "literally: how do you call yourself?"
     }
 ]
 };
@@ -401,7 +461,10 @@ const DECK = {
 
 <!-- STUDY SCREEN -->
 <div class="screen" id="study-screen">
-  <div id="card-counter"></div>
+  <div style="width:100%; display:flex; justify-content:space-between; align-items:center;">
+    <div id="card-counter"></div>
+    <button onclick="endSession()" style="background:none; border:none; color:var(--text-muted); font-size:13px; cursor:pointer; padding:6px 12px; border-radius:99px; background:var(--surface);">End session</button>
+  </div>
   <div class="card-scene" id="card-scene" onclick="flipCard()">
     <div class="card-inner" id="card-inner">
       <div class="card-face front">

@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Language Lab Flashcards</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d2e;
+    --card-bg: #ffffff;
+    --text: #f1f5f9;
+    --text-muted: #94a3b8;
+    --green: #22c55e;
+    --red: #ef4444;
+    --indigo: #6366f1;
+    --indigo-dim: rgba(99,102,241,0.15);
+    --border: rgba(255,255,255,0.07);
+    --radius: 20px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0;
+    overflow-x: hidden;
+  }
+
+  /* ── PROGRESS BAR ── */
+  #progress-bar-wrap {
+    width: 100%;
+    height: 4px;
+    background: var(--border);
+    position: fixed;
+    top: 0; left: 0;
+    z-index: 100;
+  }
+  #progress-bar {
+    height: 100%;
+    background: var(--indigo);
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+
+  /* ── HEADER ── */
+  #header {
+    width: 100%;
+    max-width: 480px;
+    padding: 24px 20px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 12px;
+  }
+  #header .deck-info { }
+  #header .deck-title { font-size: 17px; font-weight: 700; }
+  #header .deck-sub { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+  #streak-badge {
+    background: var(--indigo-dim);
+    color: var(--indigo);
+    border-radius: 99px;
+    padding: 6px 14px;
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  /* ── SCREENS ── */
+  .screen {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 480px;
+    padding: 20px 20px 40px;
+    flex: 1;
+  }
+  .screen.active { display: flex; }
+
+  /* ── START SCREEN ── */
+  #start-screen {
+    justify-content: center;
+    gap: 24px;
+    padding-top: 60px;
+  }
+  .start-icon {
+    font-size: 64px;
+    text-align: center;
+  }
+  .start-titles { text-align: center; }
+  .start-titles h1 { font-size: 26px; font-weight: 800; line-height: 1.2; }
+  .start-titles p { color: var(--text-muted); font-size: 15px; margin-top: 6px; }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    width: 100%;
+  }
+  .stat-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 10px;
+    text-align: center;
+  }
+  .stat-box .num { font-size: 24px; font-weight: 800; color: var(--indigo); }
+  .stat-box .lbl { font-size: 11px; color: var(--text-muted); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .btn-primary {
+    width: 100%;
+    padding: 18px;
+    background: var(--indigo);
+    color: white;
+    font-size: 17px;
+    font-weight: 700;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-primary:active { opacity: 0.85; transform: scale(0.98); }
+
+  /* ── STUDY SCREEN ── */
+  #study-screen { gap: 20px; padding-top: 16px; }
+  #card-counter { font-size: 13px; color: var(--text-muted); align-self: flex-start; }
+
+  /* ── CARD FLIP ── */
+  .card-scene {
+    width: 100%;
+    perspective: 1000px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  .card-inner {
+    position: relative;
+    width: 100%;
+    min-height: 240px;
+    transform-style: preserve-3d;
+    transition: transform 0.45s cubic-bezier(0.4,0,0.2,1);
+  }
+  .card-inner.flipped { transform: rotateY(180deg); }
+  .card-face {
+    position: absolute;
+    width: 100%;
+    min-height: 240px;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 24px;
+    gap: 12px;
+  }
+  .card-face.back { transform: rotateY(180deg); }
+  .card-lang {
+    font-size: 13px;
+    color: #64748b;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .card-word {
+    font-size: 32px;
+    font-weight: 800;
+    color: #0f172a;
+    text-align: center;
+    line-height: 1.2;
+  }
+  .card-hint {
+    font-size: 14px;
+    color: #94a3b8;
+    text-align: center;
+    font-style: italic;
+  }
+  .card-tap-hint {
+    font-size: 13px;
+    color: #94a3b8;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    position: absolute;
+    bottom: 18px;
+  }
+  .card-stats-badge {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    font-size: 11px;
+    color: #94a3b8;
+    display: flex;
+    gap: 8px;
+  }
+  .badge-item { display: flex; align-items: center; gap: 3px; }
+
+  /* ── ACTION BUTTONS ── */
+  #action-btns {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  #action-btns.visible { opacity: 1; pointer-events: all; }
+  .btn-wrong, .btn-right {
+    flex: 1;
+    padding: 18px;
+    font-size: 16px;
+    font-weight: 700;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: transform 0.1s, opacity 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-wrong:active, .btn-right:active { transform: scale(0.97); opacity: 0.85; }
+  .btn-wrong { background: rgba(239,68,68,0.12); color: var(--red); }
+  .btn-right { background: rgba(34,197,94,0.12); color: var(--green); }
+
+  /* ── END SCREEN ── */
+  #end-screen { gap: 20px; justify-content: center; padding-top: 40px; }
+  .end-icon { font-size: 72px; text-align: center; }
+  .end-title { font-size: 26px; font-weight: 800; text-align: center; }
+  .end-sub { font-size: 15px; color: var(--text-muted); text-align: center; }
+  .results-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    width: 100%;
+  }
+  .result-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    text-align: center;
+  }
+  .result-box .num { font-size: 28px; font-weight: 800; }
+  .result-box .lbl { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+  .result-box.green .num { color: var(--green); }
+  .result-box.red .num { color: var(--red); }
+  .result-box.indigo .num { color: var(--indigo); }
+
+  .weak-cards { width: 100%; }
+  .weak-cards h3 { font-size: 14px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
+  .weak-card-pill {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 15px;
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .weak-card-pill .word { font-weight: 600; }
+  .weak-card-pill .ratio { font-size: 13px; color: var(--red); }
+
+  .btn-secondary {
+    width: 100%;
+    padding: 16px;
+    background: var(--surface);
+    color: var(--text);
+    font-size: 16px;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: opacity 0.15s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn-secondary:active { opacity: 0.7; }
+
+  /* ── VOCAB STATUS ── */
+  .filter-btn {
+    padding: 7px 16px;
+    border-radius: 99px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: all 0.15s;
+  }
+  .filter-btn.active {
+    background: var(--indigo);
+    border-color: var(--indigo);
+    color: white;
+  }
+  .vocab-row {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  .vocab-row .v-words { flex: 1; }
+  .vocab-row .v-front { font-size: 16px; font-weight: 700; color: var(--text); }
+  .vocab-row .v-back { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+  .vocab-row .v-stats { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .vocab-row .v-score { font-size: 11px; font-weight: 700; border-radius: 99px; padding: 3px 10px; }
+  .score-new { background: rgba(148,163,184,0.15); color: #94a3b8; }
+  .score-weak { background: rgba(239,68,68,0.12); color: var(--red); }
+  .score-learning { background: rgba(251,191,36,0.12); color: #fbbf24; }
+  .score-mastered { background: rgba(34,197,94,0.12); color: var(--green); }
+  .vocab-row .v-counts { font-size: 12px; color: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<!-- ── INJECT DECK DATA HERE ── -->
+<script id="deck-data">
+const DECK = {
+  title: "Week 1 — Introductions",
+  subtitle: "Richard · Language Lab",
+  frontLang: "🇪🇸 Spanish",
+  backLang: "🇺🇸 English",
+  cards: [
+    { front: "me llamo", back: "my name is", hint: "literally: I call myself" },
+    { front: "soy", back: "I am (permanent)", hint: "use for identity, origin, profession" },
+    { front: "estoy", back: "I am (temporary)", hint: "use for feelings, location, state" },
+    { front: "¿de dónde eres?", back: "where are you from?", hint: null },
+    { front: "tengo ___ años", back: "I am ___ years old", hint: "tengo = I have" },
+    { front: "hablo", back: "I speak", hint: "hablar = to speak" },
+    { front: "un poco", back: "a little", hint: null },
+    { front: "mucho gusto", back: "nice to meet you", hint: null },
+    { front: "encantado/a", back: "delighted to meet you", hint: "formal; change -o to -a if female" },
+    { front: "¿cómo estás?", back: "how are you?", hint: "informal" },
+    { front: "bien", back: "well / good", hint: null },
+    { front: "más o menos", back: "so-so / more or less", hint: null },
+    { front: "aprender", back: "to learn", hint: "infinitive form" },
+    { front: "quiero", back: "I want", hint: "querer = to want/love" },
+    { front: "¿cómo te llamas?", back: "what's your name?", hint: "literally: how do you call yourself?" }
+  ]
+};
+</script>
+<!-- ── END DECK DATA ── -->
+
+<div id="progress-bar-wrap"><div id="progress-bar"></div></div>
+
+<div id="header">
+  <div class="deck-info">
+    <div class="deck-title" id="h-title"></div>
+    <div class="deck-sub" id="h-sub"></div>
+  </div>
+  <div id="streak-badge">🔥 <span id="streak-count">0</span></div>
+</div>
+
+<!-- START SCREEN -->
+<div class="screen active" id="start-screen">
+  <div class="start-icon">🗣️</div>
+  <div class="start-titles">
+    <h1 id="s-title"></h1>
+    <p id="s-sub"></p>
+  </div>
+  <div class="stats-grid">
+    <div class="stat-box"><div class="num" id="s-total">0</div><div class="lbl">Cards</div></div>
+    <div class="stat-box"><div class="num" id="s-mastered">0</div><div class="lbl">Mastered</div></div>
+    <div class="stat-box"><div class="num" id="s-sessions">0</div><div class="lbl">Sessions</div></div>
+  </div>
+  <button class="btn-primary" onclick="startSession()">Start Session →</button>
+  <button class="btn-secondary" onclick="startWeakOnly()" id="btn-weak" style="display:none">Review Weak Cards</button>
+  <button class="btn-secondary" onclick="showVocabStatus()">📊 All Words & Stats</button>
+</div>
+
+<!-- VOCAB STATUS SCREEN -->
+<div class="screen" id="vocab-screen">
+  <div style="width:100%; display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+    <div style="font-size:17px; font-weight:700;">All Words</div>
+    <button onclick="showScreen('start-screen')" style="background:none; border:none; color:var(--text-muted); font-size:14px; cursor:pointer; padding:6px 12px; border-radius:99px; background:var(--surface);">← Back</button>
+  </div>
+  <div style="width:100%; display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap;">
+    <button class="filter-btn active" onclick="filterVocab('all')" id="f-all">All</button>
+    <button class="filter-btn" onclick="filterVocab('new')" id="f-new">New</button>
+    <button class="filter-btn" onclick="filterVocab('weak')" id="f-weak">Needs Work</button>
+    <button class="filter-btn" onclick="filterVocab('mastered')" id="f-mastered">Mastered</button>
+  </div>
+  <div id="vocab-list" style="width:100%;"></div>
+</div>
+
+<!-- STUDY SCREEN -->
+<div class="screen" id="study-screen">
+  <div id="card-counter"></div>
+  <div class="card-scene" id="card-scene" onclick="flipCard()">
+    <div class="card-inner" id="card-inner">
+      <div class="card-face front">
+        <div class="card-stats-badge" id="card-stats-front"></div>
+        <div class="card-lang" id="front-lang"></div>
+        <div class="card-word" id="front-word"></div>
+        <div class="card-tap-hint">Tap to reveal →</div>
+      </div>
+      <div class="card-face back">
+        <div class="card-stats-badge" id="card-stats-back"></div>
+        <div class="card-lang" id="back-lang"></div>
+        <div class="card-word" id="back-word"></div>
+        <div class="card-hint" id="back-hint"></div>
+      </div>
+    </div>
+  </div>
+  <div id="action-btns">
+    <button class="btn-wrong" onclick="markCard(false)">✗ Need Practice</button>
+    <button class="btn-right" onclick="markCard(true)">✓ Got it</button>
+  </div>
+</div>
+
+<!-- END SCREEN -->
+<div class="screen" id="end-screen">
+  <div class="end-icon" id="end-icon">🎉</div>
+  <div class="end-title" id="end-title">Session Complete!</div>
+  <div class="end-sub" id="end-sub"></div>
+  <div class="results-grid">
+    <div class="result-box green"><div class="num" id="r-correct">0</div><div class="lbl">Got it</div></div>
+    <div class="result-box red"><div class="num" id="r-wrong">0</div><div class="lbl">Need Practice</div></div>
+    <div class="result-box indigo"><div class="num" id="r-mastered">0</div><div class="lbl">Mastered</div></div>
+    <div class="result-box"><div class="num" id="r-streak">0</div><div class="lbl">Best Streak</div></div>
+  </div>
+  <div class="weak-cards" id="weak-cards-section"></div>
+  <button class="btn-primary" onclick="startWeakOnly()" id="btn-review-weak" style="display:none">Review Weak Cards</button>
+  <button class="btn-secondary" onclick="startSession()">Start Over</button>
+</div>
+
+<script>
+// ── STATE ──
+const STORAGE_KEY = 'll_' + btoa(encodeURIComponent(DECK.title)).slice(0,12);
+var state = { cards: {}, sessions: 0, bestStreak: 0 };
+var queue = [];
+var current = null;
+var flipped = false;
+var sessionCorrect = 0;
+var sessionWrong = 0;
+var sessionStreak = 0;
+var bestSessionStreak = 0;
+var weakOnly = false;
+
+// ── STORAGE ──
+function loadState() {
+  try {
+    const s = localStorage.getItem(STORAGE_KEY);
+    if (s) state = JSON.parse(s);
+  } catch(e) {}
+  DECK.cards.forEach((c, i) => {
+    if (!state.cards[i]) state.cards[i] = { score: 0, seen: 0, correct: 0, wrong: 0, lastSeen: null };
+  });
+}
+
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
+}
+
+// ── QUEUE BUILDER ──
+function buildQueue(weakOnlyMode) {
+  let cards = DECK.cards.map((c, i) => ({ ...c, idx: i }));
+  if (weakOnlyMode) {
+    cards = cards.filter(c => (state.cards[c.idx].wrong > state.cards[c.idx].correct) || state.cards[c.idx].score < 1);
+    if (!cards.length) cards = DECK.cards.map((c, i) => ({ ...c, idx: i }));
+  }
+  // Sort: lower score first, then shuffle ties
+  cards.sort((a, b) => {
+    const sa = state.cards[a.idx].score;
+    const sb = state.cards[b.idx].score;
+    return sa - sb || Math.random() - 0.5;
+  });
+  return cards;
+}
+
+// ── CARD DISPLAY ──
+function showCard(card) {
+  current = card;
+  flipped = false;
+  const ci = card.idx;
+  const cs = state.cards[ci];
+
+  document.getElementById('card-inner').classList.remove('flipped');
+  document.getElementById('action-btns').classList.remove('visible');
+
+  document.getElementById('front-lang').textContent = DECK.frontLang;
+  document.getElementById('front-word').textContent = card.front;
+  document.getElementById('back-lang').textContent = DECK.backLang;
+  document.getElementById('back-word').textContent = card.back;
+  document.getElementById('back-hint').textContent = card.hint || '';
+  document.getElementById('back-hint').style.display = card.hint ? 'block' : 'none';
+
+  const badge = cs.seen > 0
+    ? `<span class="badge-item">👁 ${cs.seen}</span><span class="badge-item" style="color:#22c55e">✓ ${cs.correct}</span><span class="badge-item" style="color:#ef4444">✗ ${cs.wrong}</span>`
+    : '';
+  document.getElementById('card-stats-front').innerHTML = badge;
+  document.getElementById('card-stats-back').innerHTML = badge;
+
+  const pos = queue.indexOf(card);
+  const total = queue.length + (sessionCorrect + sessionWrong);
+  document.getElementById('card-counter').textContent = `Card ${sessionCorrect + sessionWrong + 1}`;
+  updateProgress();
+}
+
+function flipCard() {
+  if (flipped) return;
+  flipped = true;
+  document.getElementById('card-inner').classList.add('flipped');
+  setTimeout(() => document.getElementById('action-btns').classList.add('visible'), 200);
+}
+
+// ── MARK CARD ──
+function markCard(correct) {
+  if (!current || !flipped) return;
+  const ci = current.idx;
+  const cs = state.cards[ci];
+
+  cs.seen++;
+  cs.lastSeen = new Date().toISOString();
+
+  if (correct) {
+    cs.correct++;
+    cs.score = Math.min(cs.score + 1, 10);
+    sessionCorrect++;
+    sessionStreak++;
+    bestSessionStreak = Math.max(bestSessionStreak, sessionStreak);
+    // Push to back: score * 3 cards later
+    const delay = Math.min(cs.score * 3, queue.length);
+    if (delay > 0 && queue.length > delay) {
+      queue.splice(delay, 0);
+    }
+  } else {
+    cs.wrong++;
+    cs.score = Math.max(0, cs.score - 1);
+    sessionWrong++;
+    sessionStreak = 0;
+    // Put back after 2 cards
+    if (queue.length > 2) {
+      queue.splice(2, 0, current);
+    } else {
+      queue.push(current);
+    }
+  }
+
+  document.getElementById('streak-count').textContent = sessionStreak;
+  saveState();
+  queue.shift(); // remove current from front (already removed implicitly)
+  nextCard();
+}
+
+function nextCard() {
+  if (queue.length === 0) {
+    endSession();
+    return;
+  }
+  showCard(queue[0]);
+}
+
+function updateProgress() {
+  const done = sessionCorrect + sessionWrong;
+  const total = done + queue.length;
+  const pct = total > 0 ? (done / total) * 100 : 0;
+  document.getElementById('progress-bar').style.width = pct + '%';
+}
+
+// ── SESSIONS ──
+function startSession(weakMode) {
+  weakOnly = !!weakMode;
+  sessionCorrect = 0;
+  sessionWrong = 0;
+  sessionStreak = 0;
+  bestSessionStreak = 0;
+  state.sessions++;
+  saveState();
+
+  queue = buildQueue(weakOnly);
+  document.getElementById('streak-count').textContent = '0';
+  document.getElementById('progress-bar').style.width = '0%';
+  showScreen('study-screen');
+  if (queue.length > 0) showCard(queue[0]);
+}
+
+function startWeakOnly() { startSession(true); }
+
+function endSession() {
+  state.bestStreak = Math.max(state.bestStreak || 0, bestSessionStreak);
+  saveState();
+  showScreen('end-screen');
+
+  const mastered = DECK.cards.filter((c, i) => state.cards[i].score >= 3).length;
+  const accuracy = sessionCorrect + sessionWrong > 0
+    ? Math.round((sessionCorrect / (sessionCorrect + sessionWrong)) * 100)
+    : 0;
+
+  document.getElementById('end-icon').textContent = accuracy >= 80 ? '🎉' : accuracy >= 50 ? '💪' : '📚';
+  document.getElementById('end-title').textContent = accuracy >= 80 ? 'Great session!' : accuracy >= 50 ? 'Keep going!' : 'More practice needed';
+  document.getElementById('end-sub').textContent = `${accuracy}% accuracy · ${sessionCorrect + sessionWrong} cards reviewed`;
+  document.getElementById('r-correct').textContent = sessionCorrect;
+  document.getElementById('r-wrong').textContent = sessionWrong;
+  document.getElementById('r-mastered').textContent = mastered;
+  document.getElementById('r-streak').textContent = bestSessionStreak;
+  document.getElementById('progress-bar').style.width = '100%';
+
+  // Weak cards list
+  const weak = DECK.cards
+    .map((c, i) => ({ ...c, idx: i, s: state.cards[i] }))
+    .filter(c => c.s.wrong > c.s.correct || c.s.score < 1)
+    .sort((a, b) => (b.s.wrong - b.s.correct) - (a.s.wrong - a.s.correct))
+    .slice(0, 5);
+
+  const weakSection = document.getElementById('weak-cards-section');
+  if (weak.length > 0) {
+    weakSection.innerHTML = '<h3>Needs more practice</h3>' + weak.map(c =>
+      `<div class="weak-card-pill"><span class="word">${c.front}</span><span class="ratio">✗ ${c.s.wrong} / ✓ ${c.s.correct}</span></div>`
+    ).join('');
+    document.getElementById('btn-review-weak').style.display = 'block';
+  } else {
+    weakSection.innerHTML = '';
+    document.getElementById('btn-review-weak').style.display = 'none';
+  }
+}
+
+// ── SCREENS ──
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ── VOCAB STATUS ──
+var currentFilter = 'all';
+
+function filterVocab(filter) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('f-' + filter).classList.add('active');
+  renderVocabList();
+}
+
+function showVocabStatus() {
+  currentFilter = 'all';
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('f-all').classList.add('active');
+  renderVocabList();
+  showScreen('vocab-screen');
+}
+
+function renderVocabList() {
+  var cards = DECK.cards.map(function(c, i) {
+    var cs = state.cards[i] || { score: 0, seen: 0, correct: 0, wrong: 0 };
+    return { card: c, idx: i, cs: cs };
+  });
+
+  if (currentFilter === 'new') {
+    cards = cards.filter(function(c) { return c.cs.seen === 0; });
+  } else if (currentFilter === 'weak') {
+    cards = cards.filter(function(c) { return c.cs.seen > 0 && c.cs.score < 2; });
+  } else if (currentFilter === 'mastered') {
+    cards = cards.filter(function(c) { return c.cs.score >= 3; });
+  }
+
+  // Sort: mastered last, unseen first, weak in middle
+  cards.sort(function(a, b) {
+    return a.cs.score - b.cs.score || b.cs.wrong - a.cs.wrong;
+  });
+
+  var html = cards.length === 0
+    ? '<div style="text-align:center; color:var(--text-muted); padding:40px 0;">No cards in this category yet</div>'
+    : cards.map(function(item) {
+        var cs = item.cs;
+        var scoreLabel, scoreClass;
+        if (cs.seen === 0) { scoreLabel = 'New'; scoreClass = 'score-new'; }
+        else if (cs.score >= 3) { scoreLabel = '⭐ Mastered'; scoreClass = 'score-mastered'; }
+        else if (cs.score >= 1) { scoreLabel = 'Learning'; scoreClass = 'score-learning'; }
+        else { scoreLabel = 'Needs Work'; scoreClass = 'score-weak'; }
+
+        var accuracy = cs.seen > 0 ? Math.round((cs.correct / cs.seen) * 100) : null;
+
+        return '<div class="vocab-row">'
+          + '<div class="v-words">'
+          + '<div class="v-front">' + item.card.front + '</div>'
+          + '<div class="v-back">' + item.card.back + '</div>'
+          + '</div>'
+          + '<div class="v-stats">'
+          + '<span class="v-score ' + scoreClass + '">' + scoreLabel + '</span>'
+          + (cs.seen > 0 ? '<span class="v-counts">✓' + cs.correct + ' ✗' + cs.wrong + (accuracy !== null ? ' · ' + accuracy + '%' : '') + '</span>' : '<span class="v-counts">Not seen yet</span>')
+          + '</div>'
+          + '</div>';
+      }).join('');
+
+  document.getElementById('vocab-list').innerHTML = html;
+}
+
+// ── INIT ──
+function init() {
+  loadState();
+  document.getElementById('h-title').textContent = DECK.title;
+  document.getElementById('h-sub').textContent = DECK.subtitle;
+  document.getElementById('s-title').textContent = DECK.title;
+  document.getElementById('s-sub').textContent = DECK.subtitle;
+  document.getElementById('s-total').textContent = DECK.cards.length;
+  document.getElementById('s-sessions').textContent = state.sessions || 0;
+
+  const mastered = DECK.cards.filter((c, i) => state.cards[i] && state.cards[i].score >= 3).length;
+  document.getElementById('s-mastered').textContent = mastered;
+  document.getElementById('streak-count').textContent = '0';
+
+  const hasWeak = DECK.cards.some((c, i) => state.cards[i] && state.cards[i].wrong > 0);
+  document.getElementById('btn-weak').style.display = hasWeak ? 'block' : 'none';
+}
+
+init();
+</script>
+</body>
+</html>
